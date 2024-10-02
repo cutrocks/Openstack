@@ -1,0 +1,27 @@
+# Generate ssh key on controller
+ssh-keygen -t rsa
+
+# Distribute the key to all host
+"ssh-copy-id -f -i ~/.ssh/id_rsa.pub root@* "
+
+# Install Ceph ( Cephadmn )
+"CEPH_RELEASE=18.2.4
+curl --silent --remote-name --location https://download.ceph.com/rpm-${CEPH_RELEASE}/el9/noarch/cephadm"
+chmod +x cephadm
+./cephadm add-repo --release reef
+./cephadm install
+
+# Bootstrap ceph ( Mon IP and Cluster Block IP )
+cephadm bootstrap --mon-ip 172.19.244.11 --cluster-network 172.19.244.0/22 --log-to-file --skip-monitoring-stack
+"cephadm shell
+exit
+cephadm shell -- ceph -s
+cephadm add-repo --release reef
+cephadm install ceph-common"
+
+# Copy ceph pubkey to all controller
+ssh-copy-id -f -i /etc/ceph/ceph.pub root@
+
+
+
+
