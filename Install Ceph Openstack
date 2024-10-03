@@ -1,0 +1,71 @@
+# Generate ssh key on controller
+ssh-keygen -t rsa
+
+# Distribute the key to all host
+"ssh-copy-id -f -i ~/.ssh/id_rsa.pub root@* "
+
+# Install Ceph ( Cephadmn )
+"CEPH_RELEASE=18.2.4
+curl --silent --remote-name --location https://download.ceph.com/rpm-${CEPH_RELEASE}/el9/noarch/cephadm"
+chmod +x cephadm
+./cephadm add-repo --release reef
+./cephadm install
+
+# Bootstrap ceph ( Mon IP and Cluster Block IP )
+cephadm bootstrap --mon-ip 172.19.244.11 --cluster-network 172.19.244.0/22 --log-to-file --skip-monitoring-stack
+"cephadm shell
+exit
+cephadm shell -- ceph -s
+cephadm add-repo --release reef
+cephadm install ceph-common"
+
+# Copy ceph pubkey to all controller
+ssh-copy-id -f -i /etc/ceph/ceph.pub root@
+
+# Install podman to all controller and ceph client
+ssh controller02 apt install podman -y
+ssh ceph01 apt install podman -y
+
+# Register another controller
+ceph orch host add controller01 10.10.6.70 --labels _admin
+ceph orch host add controller02 10.10.6.71 --labels _admin
+
+ceph orch apply mon --placement="count:3 controller01 controller02 controller03"
+ceph orch apply mgr --placement="count:3 controller01 controller02 controller03"
+
+#Register ceph client
+ceph orch host add ceph01 10.10.6.72
+
+#Add OSD ( Before adding OSD, wipe all additional disk on ceph client - wipefs -a )
+ceph orch daemon add osd ceph01:/dev/sdb
+ceph orch daemon add osd ceph-btm:/dev/sdc
+ceph orch daemon add osd ceph-btm:/dev/sdd
+ceph orch host ls
+ceph orch device ls
+
+# Create Pool for openstack
+ceph osd pool create volumes
+ceph osd pool create images
+ceph osd pool create backups
+ceph osd pool create vms
+
+# Init Pool
+rbd pool init volumes
+rbd pool init images
+rbd pool init backups
+rbd pool init vms
+
+# Create ceph keyring
+ceph auth get-or-create client.glance mon 'allow r' osd 'allow class-read object_prefix rbd_children, allow rwx pool=images' -o /etc/ceph/ceph.client.glance.keyring
+ceph auth get-or-create client.cinder mon 'allow r' osd 'allow class-read object_prefix rbd_children, allow rwx pool=volumes, allow rwx pool=images' -o /etc/ceph/ceph.client.cinder.keyring
+ceph auth get-or-create client.nova mon 'allow r' osd 'allow class-read object_prefix rbd_children, allow rwx pool=vms, allow rx pool=images' -o /etc/ceph/ceph.client.nova.keyring
+ceph auth get-or-create client.cinder-backup mon 'allow r' osd 'allow class-read object_prefix rbd_children, allow rwx pool=backups' -o /etc/ceph/ceph.client.cinder-backup.keyring
+
+# Check status Ceph
+ceph status; ceph osd tree; ceph df
+ceph orch ps; ceph osd pool ls
+ls -lh /etc/ceph/
+
+
+
+
