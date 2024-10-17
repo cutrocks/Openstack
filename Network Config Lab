@@ -1,0 +1,40 @@
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    enp0s3:
+      addresses: [192.168.100.10/24]
+      nameservers:
+        addresses: [8.8.8.8]
+      routes:
+        - to: default
+          via: 192.168.100.1
+    enp0s8:
+      dhcp4: false
+    enp0s9:
+      dhcp4: false
+
+  vlans:
+    vlan2001:
+      id: 2001
+      link: enp0s8
+      addresses:
+        - 172.21.2.10/24  # Internal API VLAN
+
+    vlan2002:
+      id: 2002
+      link: enp0s8
+      addresses:
+        - 172.21.3.10/24  # VXLAN VLAN
+
+    vlan2003:
+      id: 2003
+      link: enp0s8
+      addresses:
+        - 172.21.4.10/24  # Ceph Public VLAN
+
+    vlan2004:
+      id: 2004
+      link: enp0s8
+      addresses:
+        - 172.21.5.10/24  # Ceph Cluster VLAN
