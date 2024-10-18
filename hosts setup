@@ -6,7 +6,7 @@
 172.21.2.13 compute03 compute03.smk1.lab
 172.21.2.100 internal.smk1.lab
 
-192.168.100.10 controler01.public.smk1.lab
+192.168.100.10 controller01.public.smk1.lab
 192.168.100.11 compute01.public.smk1.lab
 192.168.100.12 compute02.public.smk1.lab
 192.168.100.13 compute03.public.smk1.lab
