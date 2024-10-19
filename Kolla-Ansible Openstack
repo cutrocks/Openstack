@@ -133,14 +133,10 @@ ceph_nova_user: "nova"
 ceph_nova_pool_name: "vms"
 glance_backend_ceph: "yes"
 cinder_backend_ceph: "yes"
+nova_backend_ceph: "yes"
 nova_compute_virt_type: "kvm"
 neutron_ovn_distributed_fip: "yes"
-enable_letsencrypt: "yes"
-letsencrypt_email: "mrifai.it@gmail.com"
-enable_glance: "yes"
-nova_default_ephemeral_format: "qcow2"
-nova_backend_ceph: "yes"
-glance_default_image_format: "qcow2"
+
 
 #Check and verify global yml
 grep -v "#" /etc/kolla/globals.yml | tr -s [:space:]
