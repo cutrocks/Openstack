@@ -153,3 +153,9 @@ kolla-ansible -i multinode deploy
 
 ### Do post-deploy after OpenStack was successfuly deployed
 kolla-ansible -i multinode post-deploy
+
+#Install Openstack Client
+pip3 install python-openstackclient
+
+
+
