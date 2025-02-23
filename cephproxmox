@@ -1,0 +1,50 @@
+**Solusi Mengaktifkan Live Migration untuk LXC di Proxmox dengan RBD Storage**
+
+1. **Tambahkan `shared 1` pada konfigurasi RBD**  
+   - Edit file `/etc/pve/storage.cfg`:
+     ```bash
+     nano /etc/pve/storage.cfg
+     ```
+   - Ubah konfigurasi `VMDATA` menjadi:
+     ```
+     rbd: VMDATA
+     content images,rootdir
+     krbd 0
+     pool VMDATA
+     shared 1
+     ```
+   - Simpan dan keluar (`CTRL+X`, `Y`, `ENTER`).
+   - Restart service storage:
+     ```bash
+     systemctl restart pvedaemon pveproxy pvestatd
+     ```
+
+2. **Aktifkan `krbd` untuk mendukung Live Migration**  
+   - Ubah `krbd 0` menjadi `krbd 1` di `/etc/pve/storage.cfg`:
+     ```
+     rbd: VMDATA
+     content images,rootdir
+     krbd 1
+     pool VMDATA
+     shared 1
+     ```
+   - Restart Proxmox services:
+     ```bash
+     systemctl restart pvedaemon pveproxy pvestatd
+     ```
+
+3. **Coba Lakukan Live Migration**  
+   - Untuk container (LXC):
+     ```bash
+     pct migrate 100 cluster02 --online
+     ```
+   - Untuk VM (QEMU/KVM):
+     ```bash
+     qm migrate 100 cluster02 --online
+     ```
+
+Jika masih gagal atau tetap dalam **Restart Mode**, periksa log migrasi:
+```bash
+journalctl -xe | grep migration
+```
+
