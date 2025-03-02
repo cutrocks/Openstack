@@ -20,8 +20,8 @@ mkdir -p /etc/kolla
 chown $USER:$USER /etc/kolla
 
 #Copy fileglobals.yml and passwords.yml to /etc/kolla directory
-cp -r 2023.1-venv/share/kolla-ansible/etc_examples/kolla/* /etc/kolla
-cp 2023.1-venv/share/kolla-ansible/ansible/inventory/* .
+cp -r 2023.2-venv/share/kolla-ansible/etc_examples/kolla/* /etc/kolla
+cp 2023.2-venv/share/kolla-ansible/ansible/inventory/* .
 
 #Install Ansible Galaxy dependencies
 kolla-ansible install-deps
