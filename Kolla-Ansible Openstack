@@ -155,7 +155,16 @@ kolla-ansible -i multinode deploy
 kolla-ansible -i multinode post-deploy
 
 #Install Openstack Client
+cat /etc/kolla/certificates/ca/root.crt | sudo tee -a /etc/ssl/certs/ca-certificates.crt
+echo "export OS_CACERT=/etc/ssl/certs/ca-certificates.crt" >> /etc/kolla/admin-openrc.sh
 pip3 install python-openstackclient
+openstack --version
 
+source ~/2023.2/bin/activate
+source /etc/kolla/admin-openrc.sh
+openstack endpoint list
+openstack service list
+openstack compute service list; openstack network agent list
+openstack volume service list; cinder get-pools
 
 
