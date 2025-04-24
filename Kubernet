@@ -1,168 +1,107 @@
-### Tutorial Instalasi Kubernetes dengan 3 Master dan 3 Worker di Ubuntu 22.04
+## Panduan Instalasi Kubernetes Cluster di Ubuntu 22.04
+### Berdasarkan Referensi: https://hbayraktar.medium.com/how-to-install-kubernetes-cluster-on-ubuntu-22-04-step-by-step-guide-7dbf7e8f5f99
 
-**Catatan:**
-- Pastikan Anda memiliki akses ke server dengan hostname dan IP sebagai berikut:
-  - Master Nodes:
-    - `k8smaster1` - 172.16.0.41
-    - `k8smaster2` - 172.16.0.42
-    - `k8smaster3` - 172.16.0.43
-  - Worker Nodes:
-    - `k8sworker1` - 172.16.0.51
-    - `k8sworker2` - 172.16.0.52
-    - `k8sworker3` - 172.16.0.53
+### Topologi Cluster:
+- **3 Master Nodes (Control Plane):**
+  - k8smaster01 (10.10.0.100)
+  - k8smaster02 (10.10.0.101)
+  - k8smaster03 (10.10.0.102)
 
-### 1. Persiapan Awal
+- **3 Worker Nodes:**
+  - k8sworker01 (10.10.0.103)
+  - k8sworker02 (10.10.0.104)
+  - k8sworker03 (10.10.0.105)
 
-#### 1.1 Update dan Installasi Awal
+---
+
+### Langkah-langkah Instalasi:
+
+#### 1. **Persiapan Awal (Semua Node):**
 ```bash
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y curl apt-transport-https gnupg2
+sudo apt install -y apt-transport-https ca-certificates curl
+swapoff -a
+sed -i '/ swap / s/^/#/' /etc/fstab
 ```
 
-#### 1.2 Konfigurasi Hostname
-Jalankan perintah berikut di masing-masing node:
-
-**Untuk Master 1:**
-```bash
-sudo hostnamectl set-hostname k8smaster1
+Tambahkan di `/etc/modules-load.d/k8s.conf`:
+```
+br_netfilter
 ```
 
-**Untuk Master 2:**
+Tambahkan di `/etc/sysctl.d/k8s.conf`:
+```
+net.bridge.bridge-nf-call-iptables = 1
+net.ipv4.ip_forward = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+```
 ```bash
-sudo hostnamectl set-hostname k8smaster2
+sudo sysctl --system
 ```
 
-**Untuk Master 3:**
+#### 2. **Install Container Runtime (Containerd):**
 ```bash
-sudo hostnamectl set-hostname k8smaster3
+sudo apt install -y containerd
+sudo mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml
+sudo systemctl restart containerd
+sudo systemctl enable containerd
 ```
 
-**Untuk Worker 1:**
+#### 3. **Install Kubernetes Tools (kubeadm, kubelet, kubectl):**
 ```bash
-sudo hostnamectl set-hostname k8sworker1
-```
-
-**Untuk Worker 2:**
-```bash
-sudo hostnamectl set-hostname k8sworker2
-```
-
-**Untuk Worker 3:**
-```bash
-sudo hostnamectl set-hostname k8sworker3
-```
-
-Edit file `/etc/hosts` di semua node untuk menambahkan mapping hostname-IP:
-```bash
-172.16.0.41 k8smaster1
-172.16.0.42 k8smaster2
-172.16.0.43 k8smaster3
-172.16.0.51 k8sworker1
-172.16.0.52 k8sworker2
-172.16.0.53 k8sworker3
-```
-
-### 2. Instalasi Docker dan CRI-O
-
-#### 2.1 Instalasi Docker
-```bash
-sudo apt install -y docker.io
-sudo systemctl enable docker --now
-```
-
-#### 2.2 Konfigurasi CRI-O
-
-Tambahkan repository CRI-O:
-```bash
-export OS="xUbuntu_22.04"
-export VERSION="1.26"
-echo "deb [signed-by=/usr/share/keyrings/libcontainers-archive-keyring.gpg] \
-https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/$OS/ /" | sudo tee /etc/apt/sources.list.d/libcontainers.list
-
-echo "deb [signed-by=/usr/share/keyrings/libcontainers-crio-archive-keyring.gpg] \
-https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/$VERSION/$OS/ /" | sudo tee /etc/apt/sources.list.d/crio.list
-
-sudo apt update
-sudo apt install -y cri-o cri-o-runc
-sudo systemctl enable crio --now
-```
-
-### 3. Instalasi Kubernetes
-
-#### 3.1 Tambahkan Repository Kubernetes
-```bash
-sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
-echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
 sudo apt update
 sudo apt install -y kubelet kubeadm kubectl
 sudo apt-mark hold kubelet kubeadm kubectl
 ```
 
-#### 3.2 Nonaktifkan Swap
+#### 4. **Inisialisasi Cluster di k8smaster01:**
 ```bash
-sudo swapoff -a
-sudo sed -i '/ swap / s/^/#/' /etc/fstab
+sudo kubeadm init --control-plane-endpoint=10.10.0.100 --upload-certs
 ```
 
-#### 3.3 Aktifkan Modul Kernel
-```bash
-sudo modprobe overlay
-sudo modprobe br_netfilter
+Salin `kubeadm join` command + `--certificate-key` dari output untuk master lainnya.
 
-cat <<EOF | sudo tee /etc/sysctl.d/kubernetes.conf
-net.bridge.bridge-nf-call-ip6tables = 1
-net.bridge.bridge-nf-call-iptables = 1
-net.ipv4.ip_forward = 1
-EOF
-
-sudo sysctl --system
-```
-
-### 4. Konfigurasi Cluster
-
-#### 4.1 Inisialisasi Master Node
-Jalankan di `k8smaster1`:
-```bash
-sudo kubeadm init --apiserver-advertise-address=172.16.0.41 --control-plane-endpoint=k8smaster1 --pod-network-cidr=192.168.0.0/16
-```
-
-Setelah berhasil, jalankan perintah ini:
+#### 5. **Konfigurasi kubectl (hanya master pertama):**
 ```bash
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
-#### 4.2 Tambahkan Master Node Lain
-Dapatkan perintah join untuk control-plane dari `k8smaster1` dan jalankan di `k8smaster2` dan `k8smaster3`.
-
-Contoh:
+#### 6. **Join Master Node Lainnya:**
+Pada `k8smaster02` dan `k8smaster03`, jalankan:
 ```bash
-sudo kubeadm join 172.16.0.41:6443 --token <TOKEN> \
-    --discovery-token-ca-cert-hash sha256:<HASH> \
-    --control-plane
+sudo kubeadm join 10.10.0.100:6443 \
+  --token <token> \
+  --discovery-token-ca-cert-hash sha256:<hash> \
+  --control-plane \
+  --certificate-key <certificate-key>
 ```
 
-#### 4.3 Tambahkan Worker Node
-Dapatkan perintah join worker dari `k8smaster1` dan jalankan di semua worker node (`k8sworker1`, `k8sworker2`, `k8sworker3`).
-
-Contoh:
+#### 7. **Join Worker Nodes:**
+Pada setiap worker node (`k8sworker01-03`):
 ```bash
-sudo kubeadm join 172.16.0.41:6443 --token <TOKEN> \
-    --discovery-token-ca-cert-hash sha256:<HASH>
+sudo kubeadm join 10.10.0.100:6443 \
+  --token <token> \
+  --discovery-token-ca-cert-hash sha256:<hash>
 ```
 
-### 5. Instalasi CNI (Contoh: Calico)
-Jalankan perintah berikut di `k8smaster1`:
+#### 8. **Pasang Network Plugin (Contoh: Calico):**
 ```bash
-kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/calico.yaml
 ```
 
-### 6. Verifikasi
-Periksa status node:
+#### 9. **Verifikasi Node:**
 ```bash
 kubectl get nodes
 ```
+Semua node harus tampil dengan status `Ready`.
 
-Semua node seharusnya berstatus `Ready`.
+---
+
+### Selesai ✅
+Cluster Kubernetes dengan 3 control plane dan 3 worker siap digunakan.
 
