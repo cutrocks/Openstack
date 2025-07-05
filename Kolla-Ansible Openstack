@@ -142,6 +142,20 @@ neutron_ovn_distributed_fip: "yes"
 grep -v "#" /etc/kolla/globals.yml | tr -s [:space:]
 
 #Deploy OpenStack
+# Install dependency di server
+kolla-ansible bootstrap-servers -i multinode
+
+# Jalankan pre-check
+kolla-ansible prechecks -i multinode
+
+# Deploy OpenStack
+kolla-ansible deploy -i multinode
+
+# Post-deploy step
+kolla-ansible post-deploy -i multinode
+
+
+
 ### Bootstrap servers with kolla deploy dependencies
 kolla-ansible -i bootstrap-servers multinode 
 
