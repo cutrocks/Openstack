@@ -143,16 +143,16 @@ grep -v "#" /etc/kolla/globals.yml | tr -s [:space:]
 
 #Deploy OpenStack
 ### Bootstrap servers with kolla deploy dependencies
-kolla-ansible -i multinode bootstrap-servers
+kolla-ansible -i bootstrap-servers multinode 
 
 ### Do pre-deployment checks for hosts
-kolla-ansible -i multinode prechecks
+kolla-ansible -i prechecks multinode 
 
 ### Finally proceed to actual OpenStack deployment
-kolla-ansible -i multinode deploy
+kolla-ansible -i deploy multinode 
 
 ### Do post-deploy after OpenStack was successfuly deployed
-kolla-ansible -i multinode post-deploy
+kolla-ansible -i post-deploy multinode 
 
 #Install Openstack Client
 cat /etc/kolla/certificates/ca/root.crt | sudo tee -a /etc/ssl/certs/ca-certificates.crt
