@@ -69,7 +69,7 @@ ansible -i multinode all -m ping
 
 #Generate Password for every openstack services and TLS Certificate
 kolla-genpwd
-kolla-ansible -i multinode certificates
+kolla-ansible certificates -i multinode
 
 #Create Directory for Kolla Ansible Configuration
 mkdir /etc/kolla/config
