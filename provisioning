@@ -1,0 +1,60 @@
+
+OpenStack 2024.2 (Caracal) - Tutorial Singkat Provisioning VM
+
+1. Buat Flavor
+--------------
+openstack flavor create demo.tiny1 --id auto --ram 1024 --disk 5 --vcpus 1
+openstack flavor create demo.tiny2 --id auto --ram 2048 --disk 5 --vcpus 2
+openstack flavor create demo.medium1 --id auto --ram 4096 --disk 20 --vcpus 2
+openstack flavor create demo.medium2 --id auto --ram 8192 --disk 40 --vcpus 4
+openstack flavor create demo.high1 --id auto --ram 16384 --disk 80 --vcpus 8
+openstack flavor create demo.high2 --id auto --ram 32768 --disk 160 --vcpus 16
+
+2. Upload Image (Ubuntu 22.04)
+------------------------------
+wget https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img -O ubuntu-22.04.img
+
+openstack image create "ubuntu-22.04" \
+  --file ubuntu-22.04.img \
+  --disk-format qcow2 \
+  --container-format bare \
+  --public
+
+3. Buat SSH Keypair
+--------------------
+openstack keypair create demo-key > demo-key.pem
+chmod 600 demo-key.pem
+
+4. Buat Network dan Subnet
+---------------------------
+# Public VLAN Network
+openstack network create public --external --provider-network-type vlan --provider-physical-network physnet1 --provider-segment 1000 --share
+openstack subnet create public-subnet --network public --subnet-range 10.0.0.0/24 --gateway 10.0.0.1 --no-dhcp --allocation-pool start=10.0.0.100,end=10.0.0.200
+
+# Internal Network
+openstack network create internal
+openstack subnet create internal-subnet --network internal --subnet-range 192.168.100.0/24 --gateway 192.168.100.1 --dhcp
+
+5. Buat Router dan Hubungkan Subnet
+------------------------------------
+openstack router create public-router
+openstack router add subnet public-router internal-subnet
+openstack router set public-router --external-gateway public
+
+6. Security Group Rule
+------------------------
+openstack security group rule create --proto icmp default
+openstack security group rule create --proto tcp --dst-port 22 default
+
+7. Deploy Instance
+-------------------
+openstack server create ubuntu-22-test \
+  --image ubuntu-22.04 \
+  --flavor demo.medium1 \
+  --network public \
+  --key-name demo-key
+
+8. Cek Status dan Akses
+------------------------
+openstack server list
+ssh -i demo-key.pem ubuntu@<PUBLIC_IP>
